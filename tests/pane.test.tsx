@@ -164,3 +164,21 @@ test('git: outside a repository the tab says so', async ($, on) => {
   expect(await ui.find({ type: 'Text', text: /not a git repository/ })).toBeDefined()
   await ui.unmount()
 })
+
+test('/workbench closes the pane when it is shown', async ($, on) => {
+  host(on)
+  const closed: string[] = []
+  on('ui.close', (_, e) => {
+    closed.push(e.id)
+    return { value: undefined }
+  })
+  await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
+  const r = await $.command.run({
+    command: 'workbench',
+    args: '',
+    origin: { kind: 'composer' },
+    presentation: { isFullscreen: true, columns: 190 },
+  })
+  expect(closed).toEqual(['workbench'])
+  expect(r).toMatchObject({ text: 'Workbench closed.' })
+})

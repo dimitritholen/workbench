@@ -146,7 +146,7 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     os = await detectOs($, e.cwd)
     folder = e.cwd.split(/[\\/]/).filter(Boolean).pop() ?? e.cwd
-    await $.command.register({ name: 'workbench', description: 'Open the Files / System / Git pane' })
+    await $.command.register({ name: 'workbench', description: 'Open or close the Files / System / Git pane' })
     // A new session starts at the working directory again.
     await update($, dir, () => '')
     await update($, preview, () => null)
@@ -159,6 +159,11 @@ export const register: Register = on => {
   })
 
   on('command.run', { command: 'workbench' }, async $ => {
+    // a toggle, so the pane closes without a mouse
+    if ((await $.ui.panes()).find(p => p.id === PANE)?.isShown) {
+      await $.ui.close({ id: PANE })
+      return { text: 'Workbench closed.' }
+    }
     await $.ui.open({ id: PANE, title: TITLE, focus: true })
     await refresh($, await read($, tab))
     return { text: 'Workbench opened.' }
