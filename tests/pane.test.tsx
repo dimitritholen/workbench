@@ -108,7 +108,7 @@ test('git: status and log, push only on the second press', async ($, on) => {
 
   await ui.press({ key: 'push' })
   expect(ran.some(c => c.startsWith('git push'))).toBe(false)
-  expect((await ui.find({ key: 'push' }))?.text).toMatch(/Push 1 commit\(s\) naar origin\/main\?/)
+  expect((await ui.find({ key: 'push' }))?.text).toMatch(/push 1 commit\(s\) naar origin\/main\?/)
 
   await ui.press({ key: 'push' })
   expect(ran).toContain('git push')

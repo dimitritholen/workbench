@@ -17,6 +17,7 @@ const TABS: { id: Tab; label: string; hotkey: string }[] = [
   { id: 'git', label: 'Git', hotkey: '3' },
 ]
 const GIT_EVERY_TICKS = 2
+const HISTORY = 120
 
 // Change a shape tag when that value's fields change: it declines what an
 // earlier version stored, which outlives a reload.
@@ -40,7 +41,7 @@ async function refreshSystem($: EngineInterface) {
     await $.ui.status(`workbench: ${error instanceof Error ? error.message : error}`)
     return undefined
   })
-  if (snap) await update($, snapshot, () => snap)
+  if (snap) await update($, snapshot, prev => ({ ...snap, history: [...(prev?.history ?? []), snap.cpu].slice(-HISTORY) }))
 }
 
 async function refreshGit($: EngineInterface) {
@@ -147,14 +148,16 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    const { Box, Button } = $.ui.resolve(e)
+    const { Box, Text, Button } = $.ui.resolve(e)
     const current = await read($, tab)
+    const columns = e.props.bodyColumns
 
     let body
     if (current === 'files') {
       body = await renderFiles($, e, {
         here: await read($, dir),
         shown: await read($, preview),
+        columns,
         onDir: path => update($, dir, () => path),
         onFile: path => openFile($, path),
         onBack: () => update($, preview, () => null),
@@ -163,14 +166,14 @@ export const register: Register = on => {
       body = renderSystem($, e, {
         snap: await read($, snapshot),
         pending: await read($, confirm),
-        columns: e.props.bodyColumns,
+        columns,
         onKill: p => kill($, p),
       })
     } else {
       body = renderGit(
         $,
         e,
-        { g: await read($, git), pending: await read($, confirm), draft: await read($, message) },
+        { g: await read($, git), pending: await read($, confirm), draft: await read($, message), columns },
         {
           run: (args, done, timeoutMs) => gitRun($, args, done, timeoutMs),
           push: () => push($),
@@ -183,18 +186,21 @@ export const register: Register = on => {
     }
 
     return (
-      <Box flexDirection="column" gap={1}>
+      <Box flexDirection="column">
         <Box gap={1}>
           {TABS.map(t => (
-            <Button
-              key={`tab:${t.id}`}
-              label={t.label}
-              hotkey={t.hotkey}
-              variant={t.id === current ? 'primary' : undefined}
-              onPress={() => select($, t.id)}
-            />
+            <Button key={`tab:${t.id}`} plain hotkey={t.hotkey} onPress={() => select($, t.id)}>
+              {t.id === current ? (
+                <Text inverse bold color="claude">
+                  {` ${t.label} `}
+                </Text>
+              ) : (
+                <Text color="inactive">{` ${t.label} `}</Text>
+              )}
+            </Button>
           ))}
         </Box>
+        <Text color="subtle">{'─'.repeat(Math.max(0, columns))}</Text>
         {body}
       </Box>
     )

@@ -1,7 +1,8 @@
 import type { EngineInterface, RenderInput } from 'claude-code'
 
 import type { Confirm, Proc, Snapshot } from '../types'
-import { bar, bytes, isConfirmed } from './lib'
+import { bytes, isConfirmed } from './lib'
+import { INSET, fit, level, meter, panel, sparkline } from './ui'
 
 export type SystemView = {
   snap: Snapshot | null
@@ -13,54 +14,102 @@ export type SystemView = {
 const pct = (n: number) => `${n.toFixed(0).padStart(3)}%`
 
 export function renderSystem($: EngineInterface, e: RenderInput, v: SystemView) {
-  const { Box, Text, Button } = $.ui.resolve(e)
-  const { snap, columns } = v
+  const ui = $.ui.resolve(e)
+  const { Box, Text, Button } = ui
+  const { snap } = v
   if (!snap) return <Text dimColor>Meten…</Text>
 
-  const width = Math.max(8, Math.min(24, columns - 28))
+  const inner = Math.max(20, v.columns - INSET)
   const memPct = snap.mem.total ? (100 * snap.mem.used) / snap.mem.total : 0
-  const name = Math.max(8, columns - 32)
+  const history = (snap.history ?? []).slice(-inner)
+  const mountWidth = Math.min(14, Math.max(...snap.disks.map(d => d.mount.length), 4))
+  const diskBar = Math.max(6, inner - mountWidth - 22)
+  // PID 7, CPU% 6, MEM% 6, kill 2, spaces 4
+  const nameWidth = Math.max(8, inner - 25)
 
   return (
     <Box flexDirection="column">
-      <Text>
-        CPU  {bar(snap.cpu, width)} {pct(snap.cpu)}
-      </Text>
-      <Text>
-        RAM  {bar(memPct, width)} {pct(memPct)} <Text dimColor>{bytes(snap.mem.used)} / {bytes(snap.mem.total)}</Text>
-      </Text>
-      {snap.load && (
-        <Text>
-          Load <Text dimColor>{snap.load.map(n => n.toFixed(2)).join('  ')}</Text>
-        </Text>
+      {panel(
+        ui,
+        'CPU',
+        <Box flexDirection="column">
+          {meter(ui, snap.cpu, inner)}
+          <Text color="claude">{sparkline(history).padStart(inner)}</Text>
+          {snap.load && (
+            <Text dimColor>
+              load {snap.load.map(n => n.toFixed(2)).join(' · ')}
+            </Text>
+          )}
+        </Box>,
+        <Text bold color={level(snap.cpu)}>
+          {pct(snap.cpu)}
+        </Text>,
       )}
 
-      <Text weight="bold">Schijven</Text>
-      {snap.disks.map(d => {
-        const used = d.total ? (100 * d.used) / d.total : 0
-        return (
-          <Text>
-            {bar(used, width)} {pct(used)} {d.mount} <Text dimColor>{bytes(d.used)} / {bytes(d.total)}</Text>
+      {panel(
+        ui,
+        'Geheugen',
+        meter(ui, memPct, inner),
+        <Text>
+          <Text dimColor>
+            {bytes(snap.mem.used)} / {bytes(snap.mem.total)}{' '}
           </Text>
-        )
-      })}
+          <Text bold color={level(memPct)}>
+            {pct(memPct)}
+          </Text>
+        </Text>,
+      )}
 
-      <Text weight="bold">Processen</Text>
-      <Text dimColor>{'    PID ' + 'NAAM'.padEnd(name) + '  CPU%  MEM%'}</Text>
-      {snap.top.map(p => (
-        <Box key={`p:${p.pid}`} gap={1}>
-          <Text>
-            {String(p.pid).padStart(7)} {p.name.slice(0, name).padEnd(name)} {p.cpu.toFixed(1).padStart(5)}{' '}
-            {p.mem.toFixed(1).padStart(5)}
+      {panel(
+        ui,
+        'Schijven',
+        <Box flexDirection="column">
+          {snap.disks.map(d => {
+            const used = d.total ? (100 * d.used) / d.total : 0
+            return (
+              <Text>
+                {fit(d.mount, mountWidth)} {meter(ui, used, diskBar)}{' '}
+                <Text color={level(used)}>{pct(used)}</Text>
+                <Text dimColor> {`${bytes(d.used)}/${bytes(d.total)}`.padStart(15)}</Text>
+              </Text>
+            )
+          })}
+        </Box>,
+      )}
+
+      {panel(
+        ui,
+        'Processen',
+        <Box flexDirection="column">
+          <Text dimColor bold>
+            {'    PID'} {fit('NAAM', nameWidth)} {'  CPU%'} {'  MEM%'}
           </Text>
-          <Button
-            key={`kill:${p.pid}`}
-            plain
-            label={isConfirmed(v.pending, `kill:${p.pid}`) ? `kill ${p.name}?` : '×'}
-            onPress={() => v.onKill(p)}
-          />
-        </Box>
-      ))}
+          {snap.top.map(p => {
+            const isAsking = isConfirmed(v.pending, `kill:${p.pid}`)
+            return (
+              <Box key={`p:${p.pid}`}>
+                <Text>
+                  <Text dimColor>{String(p.pid).padStart(7)}</Text> {fit(p.name, nameWidth)}{' '}
+                  <Text color={level(p.cpu)}>{p.cpu.toFixed(1).padStart(6)}</Text>{' '}
+                  <Text color={level(p.mem)}>{p.mem.toFixed(1).padStart(6)}</Text>{' '}
+                </Text>
+                <Button key={`kill:${p.pid}`} plain onPress={() => v.onKill(p)}>
+                  {isAsking ? (
+                    <Text inverse bold color="error">
+                      {` kill ${p.name}? `}
+                    </Text>
+                  ) : (
+                    <Text color="error" dimColor>
+                      ×
+                    </Text>
+                  )}
+                </Button>
+              </Box>
+            )
+          })}
+        </Box>,
+        <Text dimColor>top 10 · CPU per core</Text>,
+      )}
     </Box>
   )
 }

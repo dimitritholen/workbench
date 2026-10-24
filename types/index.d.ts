@@ -9,6 +9,8 @@ export type Snapshot = {
   load?: number[]
   disks: Disk[]
   top: Proc[]
+  // the last readings of cpu, oldest first, for the sparkline
+  history?: number[]
 }
 
 export type Preview = { path: string; text?: string; note?: string }

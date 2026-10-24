@@ -2,6 +2,7 @@ import type { EngineInterface, RenderInput } from 'claude-code'
 
 import type { Preview } from '../types'
 import { bytes, join } from './lib'
+import { INSET, fit, panel } from './ui'
 
 const HIDDEN = new Set(['.git', 'node_modules'])
 const MAX_PREVIEW_BYTES = 256 * 1024
@@ -25,24 +26,49 @@ export async function mention($: EngineInterface, path: string) {
 export type FilesView = {
   here: string
   shown: Preview | null
+  columns: number
   onDir: (path: string) => unknown
   onFile: (path: string) => unknown
   onBack: () => unknown
 }
 
 export async function renderFiles($: EngineInterface, e: RenderInput, v: FilesView) {
-  const { Box, Text, Button, Code } = $.ui.resolve(e)
+  const ui = $.ui.resolve(e)
+  const { Box, Text, Button, Code } = ui
   const { here, shown } = v
+  const crumbs = here ? here.split('/') : []
+
+  const breadcrumb = (
+    <Text>
+      <Text color="claude" bold>
+        ⌂
+      </Text>
+      {crumbs.map(c => (
+        <Text>
+          <Text color="subtle"> › </Text>
+          {c}
+        </Text>
+      ))}
+    </Text>
+  )
 
   if (shown) {
     return (
       <Box flexDirection="column">
-        <Box gap={1}>
-          <Button key="back" label="← terug" hotkey="b" onPress={v.onBack} />
-          <Button key="mention-open" label="@ naar prompt" hotkey="a" onPress={() => mention($, shown.path)} />
+        {breadcrumb}
+        <Box gap={2}>
+          <Button key="back" plain hotkey="b" onPress={v.onBack}>
+            <Text color="suggestion">← terug</Text>
+          </Button>
+          <Button key="mention-open" plain hotkey="a" onPress={() => mention($, shown.path)}>
+            <Text color="claude">@ naar prompt</Text>
+          </Button>
         </Box>
-        <Text weight="bold">{shown.path}</Text>
-        {shown.note ? <Text dimColor>{shown.note}</Text> : <Code source={shown.text ?? ''} path={shown.path} startLine={1} />}
+        {panel(
+          ui,
+          shown.path.split('/').pop() ?? shown.path,
+          shown.note ? <Text dimColor>{shown.note}</Text> : <Code source={shown.text ?? ''} path={shown.path} startLine={1} />,
+        )}
       </Box>
     )
   }
@@ -50,13 +76,14 @@ export async function renderFiles($: EngineInterface, e: RenderInput, v: FilesVi
   const entries = (await $.fs.list(here || undefined).catch(() => []))
     .filter(entry => !HIDDEN.has(entry.name))
     .sort((a, b) => Number(b.kind === 'dir') - Number(a.kind === 'dir') || a.name.localeCompare(b.name))
+  // name column: what is left after the size (8) and the @ (2)
+  const nameWidth = Math.max(10, v.columns - INSET - 12)
 
-  return (
+  const rows = (
     <Box flexDirection="column">
-      <Text dimColor>./{here}</Text>
       {here && (
         <Button key="up" plain onPress={() => v.onDir(here.split('/').slice(0, -1).join('/'))}>
-          ..
+          <Text color="inactive">▴ ..</Text>
         </Button>
       )}
       {entries.length === 0 && <Text dimColor>Lege map.</Text>}
@@ -64,17 +91,31 @@ export async function renderFiles($: EngineInterface, e: RenderInput, v: FilesVi
         const path = join(here, entry.name)
         const isDir = entry.kind === 'dir'
         return (
-          <Box key={`row:${path}`} gap={1}>
-            <Button key={`m:${path}`} plain onPress={() => mention($, path)}>
-              <Text dimColor>@</Text>
-            </Button>
+          <Box key={`row:${path}`}>
             <Button key={`f:${path}`} plain onPress={() => (isDir ? v.onDir(path) : v.onFile(path))}>
-              {isDir ? `${entry.name}/` : entry.name}
-              {!isDir && <Text dimColor> {bytes(entry.size)}</Text>}
+              {isDir ? (
+                <Text color="suggestion" bold>
+                  {fit(`▸ ${entry.name}/`, nameWidth)}
+                </Text>
+              ) : (
+                <Text>{fit(`  ${entry.name}`, nameWidth)}</Text>
+              )}
+              <Text dimColor>{isDir ? ''.padStart(8) : bytes(entry.size).padStart(8)}</Text>
+            </Button>
+            <Button key={`m:${path}`} plain onPress={() => mention($, path)}>
+              <Text color="claude"> @</Text>
             </Button>
           </Box>
         )
       })}
+    </Box>
+  )
+
+  return (
+    <Box flexDirection="column">
+      {breadcrumb}
+      {panel(ui, 'Bestanden', rows, <Text dimColor>{entries.length} items</Text>)}
+      <Text dimColor>klik: openen · @: pad naar prompt</Text>
     </Box>
   )
 }
