@@ -79,7 +79,7 @@ test('system: refreshes on the clock; kill asks first, then runs kill', async ($
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
 
   await ui.press({ key: 'tab:system' })
-  expect(await ui.find({ type: 'Text', text: /Schijven/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /Disks/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /\/mnt\/c/ })).toBeDefined()
   const probes = ran.filter(c => c.startsWith('ps')).length
   await clock.advance(2000)
@@ -108,7 +108,7 @@ test('git: status and log, push only on the second press', async ($, on) => {
 
   await ui.press({ key: 'push' })
   expect(ran.some(c => c.startsWith('git push'))).toBe(false)
-  expect((await ui.find({ key: 'push' }))?.text).toMatch(/push 1 commit\(s\) naar origin\/main\?/)
+  expect((await ui.find({ key: 'push' }))?.text).toMatch(/push 1 commit\(s\) to origin\/main\?/)
 
   await ui.press({ key: 'push' })
   expect(ran).toContain('git push')
@@ -134,6 +134,6 @@ test('git: outside a repository the tab says so', async ($, on) => {
 
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   await ui.press({ key: 'tab:git' })
-  expect(await ui.find({ type: 'Text', text: /geen git-repository/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /not a git repository/ })).toBeDefined()
   await ui.unmount()
 })

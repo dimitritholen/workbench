@@ -1,6 +1,6 @@
 {
   "name": "workbench",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A pane beside the chat with Files, System and Git tabs, on macOS, Linux and Windows",
   "types": "./types/index.d.ts"
 }

@@ -21,7 +21,7 @@ export async function readGit($: EngineInterface): Promise<GitView> {
   const top = await runGit($, ['rev-parse', '--show-toplevel'])
   if (!top.ok) {
     const notRepo = /not a git repository/i.test(top.out)
-    return { ...EMPTY, error: notRepo ? undefined : `git niet gevonden of mislukt: ${top.out}` }
+    return { ...EMPTY, error: notRepo ? undefined : `git not found or failed: ${top.out}` }
   }
   const root = top.out
   const [status, log, stash] = await Promise.all([

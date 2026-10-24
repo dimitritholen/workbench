@@ -10,17 +10,17 @@ const PREVIEW_LINES = 200
 
 export async function loadPreview($: EngineInterface, path: string): Promise<Preview> {
   const stat = await $.fs.stat(path).catch(() => undefined)
-  if (!stat) return { path, note: 'Kan het bestand niet lezen.' }
-  if (stat.size > MAX_PREVIEW_BYTES) return { path, note: `Te groot voor een preview (${bytes(stat.size)}).` }
+  if (!stat) return { path, note: 'Cannot read this file.' }
+  if (stat.size > MAX_PREVIEW_BYTES) return { path, note: `Too large to preview (${bytes(stat.size)}).` }
   const text = await $.fs.read(path).catch(() => undefined)
-  if (typeof text !== 'string') return { path, note: 'Kan het bestand niet lezen.' }
-  if (text.includes('\0')) return { path, note: `Binair bestand (${bytes(stat.size)}).` }
+  if (typeof text !== 'string') return { path, note: 'Cannot read this file.' }
+  if (text.includes('\0')) return { path, note: `Binary file (${bytes(stat.size)}).` }
   return { path, text: text.split('\n').slice(0, PREVIEW_LINES).join('\n') }
 }
 
 export async function mention($: EngineInterface, path: string) {
   const filled = await $.prompt.fill({ text: `@${path} `, mode: 'insert' })
-  if (!filled.isFilled) await $.ui.toast('De promptbox nam het pad niet aan.')
+  if (!filled.isFilled) await $.ui.toast('The prompt box did not take the path.')
 }
 
 export type FilesView = {
@@ -58,10 +58,10 @@ export async function renderFiles($: EngineInterface, e: RenderInput, v: FilesVi
         {breadcrumb}
         <Box gap={2}>
           <Button key="back" plain hotkey="b" onPress={v.onBack}>
-            <Text color="suggestion">← terug</Text>
+            <Text color="suggestion">← back</Text>
           </Button>
           <Button key="mention-open" plain hotkey="a" onPress={() => mention($, shown.path)}>
-            <Text color="claude">@ naar prompt</Text>
+            <Text color="claude">@ to prompt</Text>
           </Button>
         </Box>
         {panel(
@@ -86,7 +86,7 @@ export async function renderFiles($: EngineInterface, e: RenderInput, v: FilesVi
           <Text color="inactive">▴ ..</Text>
         </Button>
       )}
-      {entries.length === 0 && <Text dimColor>Lege map.</Text>}
+      {entries.length === 0 && <Text dimColor>Empty folder.</Text>}
       {entries.map(entry => {
         const path = join(here, entry.name)
         const isDir = entry.kind === 'dir'
@@ -114,8 +114,8 @@ export async function renderFiles($: EngineInterface, e: RenderInput, v: FilesVi
   return (
     <Box flexDirection="column">
       {breadcrumb}
-      {panel(ui, 'Bestanden', rows, <Text dimColor>{entries.length} items</Text>)}
-      <Text dimColor>klik: openen · @: pad naar prompt</Text>
+      {panel(ui, 'Files', rows, <Text dimColor>{entries.length} items</Text>)}
+      <Text dimColor>click: open · @: path to prompt</Text>
     </Box>
   )
 }

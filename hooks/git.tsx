@@ -29,9 +29,9 @@ export function renderGit($: EngineInterface, e: RenderInput, v: GitPaneView, a:
   const ui = $.ui.resolve(e)
   const { Box, Text, Button } = ui
   const { g, pending, draft } = v
-  if (!g) return <Text dimColor>Laden…</Text>
+  if (!g) return <Text dimColor>Loading…</Text>
   if (!g.isRepo) {
-    return panel(ui, 'Git', <Text dimColor>{g.error ?? 'Deze map is geen git-repository.'}</Text>)
+    return panel(ui, 'Git', <Text dimColor>{g.error ?? 'This folder is not a git repository.'}</Text>)
   }
 
   const inner = Math.max(20, v.columns - INSET)
@@ -61,9 +61,9 @@ export function renderGit($: EngineInterface, e: RenderInput, v: GitPaneView, a:
 
   const status =
     g.changes.length === 0 ? (
-      <Text color="success">✓ schoon</Text>
+      <Text color="success">✓ clean</Text>
     ) : (
-      <Text color="warning">● {g.changes.length} gewijzigd</Text>
+      <Text color="warning">● {g.changes.length} changed</Text>
     )
 
   return (
@@ -71,9 +71,9 @@ export function renderGit($: EngineInterface, e: RenderInput, v: GitPaneView, a:
       <Box justifyContent="space-between">
         <Text>
           <Text color="claude" bold>
-            {g.branch || '(geen branch)'}
+            {g.branch || '(no branch)'}
           </Text>
-          <Text dimColor>{g.upstream ? ` → ${g.upstream}` : ' · geen upstream'}</Text>
+          <Text dimColor>{g.upstream ? ` → ${g.upstream}` : ' · no upstream'}</Text>
           {g.ahead > 0 && <Text color="success"> ↑{g.ahead}</Text>}
           {g.behind > 0 && <Text color="warning"> ↓{g.behind}</Text>}
         </Text>
@@ -82,26 +82,26 @@ export function renderGit($: EngineInterface, e: RenderInput, v: GitPaneView, a:
       {g.error && <Text color="error">{g.error}</Text>}
 
       <Box gap={2} flexWrap="wrap">
-        {chip('pull', '↓ pull', 'suggestion', () => a.run(['pull', '--ff-only'], 'Bijgewerkt.', NETWORK_MS))}
+        {chip('pull', '↓ pull', 'suggestion', () => a.run(['pull', '--ff-only'], 'Up to date.', NETWORK_MS))}
         <Button key="push" plain onPress={a.push}>
           {isAsking ? (
             <Text inverse bold color="warning">
-              {` ↑ push ${g.upstream ? `${g.ahead} commit(s) ` : ''}naar ${target}? `}
+              {` ↑ push ${g.upstream ? `${g.ahead} commit(s) ` : ''}to ${target}? `}
             </Text>
           ) : (
             <Text color="suggestion">↑ push</Text>
           )}
         </Button>
-        {chip('stash', '⊟ stash', 'suggestion', () => a.run(['stash'], 'Gestasht.'))}
-        {g.stashes > 0 && chip('pop', `⊞ pop (${g.stashes})`, 'suggestion', () => a.run(['stash', 'pop'], 'Stash teruggezet.'))}
+        {chip('stash', '⊟ stash', 'suggestion', () => a.run(['stash'], 'Stashed.'))}
+        {g.stashes > 0 && chip('pop', `⊞ pop (${g.stashes})`, 'suggestion', () => a.run(['stash', 'pop'], 'Stash applied.'))}
         {chip('refresh', '↻', 'inactive', a.refresh)}
       </Box>
 
       {panel(
         ui,
-        `Gestaged ${staged.length}`,
+        `Staged ${staged.length}`,
         staged.length === 0 ? (
-          <Text dimColor>Niets gestaged. Klik een wijziging om hem toe te voegen.</Text>
+          <Text dimColor>Nothing staged. Click a change to stage it.</Text>
         ) : (
           <Box flexDirection="column">
             {staged.map(c => fileRow(c, c.index, `u:${c.path}`, ['restore', '--staged', '--', c.path], 'Unstaged.', '−'))}
@@ -110,12 +110,12 @@ export function renderGit($: EngineInterface, e: RenderInput, v: GitPaneView, a:
       )}
       {panel(
         ui,
-        `Wijzigingen ${unstaged.length}`,
+        `Changes ${unstaged.length}`,
         unstaged.length === 0 ? (
-          <Text dimColor>Geen wijzigingen in de werkmap.</Text>
+          <Text dimColor>No changes in the working tree.</Text>
         ) : (
           <Box flexDirection="column">
-            {unstaged.map(c => fileRow(c, c.tree, `s:${c.path}`, ['add', '--', c.path], 'Gestaged.', '+'))}
+            {unstaged.map(c => fileRow(c, c.tree, `s:${c.path}`, ['add', '--', c.path], 'Staged.', '+'))}
           </Box>
         ),
       )}
@@ -127,17 +127,17 @@ export function renderGit($: EngineInterface, e: RenderInput, v: GitPaneView, a:
           {'Input' in ui ? (
             <ui.Input
               key="msg"
-              placeholder="Beschrijf de wijziging…"
+              placeholder="Describe the change…"
               value={draft}
               submitLabel="commit"
               onInput={value => a.draft(value)}
               onSubmit={value => a.submit(value)}
             />
           ) : (
-            <Text dimColor>Committen kan vanuit de terminal of desktop.</Text>
+            <Text dimColor>Commit from the terminal or desktop.</Text>
           )}
           <Box>
-            <Button key="commit" label={`Commit ${staged.length} bestand(en)`} variant="primary" onPress={a.commit} />
+            <Button key="commit" label={`Commit ${staged.length} file(s)`} variant="primary" onPress={a.commit} />
           </Box>
         </Box>,
       )}
@@ -146,7 +146,7 @@ export function renderGit($: EngineInterface, e: RenderInput, v: GitPaneView, a:
         ui,
         'Commits',
         g.log.length === 0 ? (
-          <Text dimColor>Nog geen commits.</Text>
+          <Text dimColor>No commits yet.</Text>
         ) : (
           <Box flexDirection="column">
             {g.log.map(c => (

@@ -89,7 +89,7 @@ async function confirmed($: EngineInterface, action: string) {
 async function kill($: EngineInterface, p: Proc) {
   if (!(await confirmed($, `kill:${p.pid}`))) return
   const r = await $.process.run(killArgv(os, p.pid)).catch(() => undefined)
-  await $.ui.toast(r?.exitCode === 0 ? `${p.name} (${p.pid}) gestopt.` : `Kon ${p.pid} niet stoppen: ${r?.stderr.trim() ?? ''}`)
+  await $.ui.toast(r?.exitCode === 0 ? `Stopped ${p.name} (${p.pid}).` : `Could not stop ${p.pid}: ${r?.stderr.trim() ?? ''}`)
   await refreshSystem($)
 }
 
@@ -110,15 +110,15 @@ async function gitRun($: EngineInterface, args: string[], done: string, timeoutM
 async function push($: EngineInterface) {
   const g = await read($, git)
   if (!g?.isRepo || !(await confirmed($, 'push'))) return
-  await gitRun($, g.upstream ? ['push'] : ['push', '-u', 'origin', g.branch], 'Gepusht.', NETWORK_MS)
+  await gitRun($, g.upstream ? ['push'] : ['push', '-u', 'origin', g.branch], 'Pushed.', NETWORK_MS)
 }
 
 async function commit($: EngineInterface) {
   const g = await read($, git)
   const text = (await read($, message)).trim()
-  if (!g?.changes.some(isStaged)) return void (await $.ui.toast('Niets gestaged om te committen.'))
-  if (!text) return void (await $.ui.toast('Schrijf eerst een commitbericht.'))
-  if (await gitRun($, ['commit', '-m', text], 'Gecommit.')) await update($, message, () => '')
+  if (!g?.changes.some(isStaged)) return void (await $.ui.toast('Nothing staged to commit.'))
+  if (!text) return void (await $.ui.toast('Write a commit message first.'))
+  if (await gitRun($, ['commit', '-m', text], 'Committed.')) await update($, message, () => '')
 }
 
 async function submit($: EngineInterface, text: string) {
@@ -144,7 +144,7 @@ export const register: Register = on => {
   on('command.run', { command: 'workbench' }, async $ => {
     await $.ui.open({ id: PANE, title: TITLE, focus: true })
     await refresh($, await read($, tab))
-    return { text: 'Workbench geopend.' }
+    return { text: 'Workbench opened.' }
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {

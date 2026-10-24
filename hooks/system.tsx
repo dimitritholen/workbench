@@ -17,7 +17,7 @@ export function renderSystem($: EngineInterface, e: RenderInput, v: SystemView) 
   const ui = $.ui.resolve(e)
   const { Box, Text, Button } = ui
   const { snap } = v
-  if (!snap) return <Text dimColor>Meten…</Text>
+  if (!snap) return <Text dimColor>Measuring…</Text>
 
   const inner = Math.max(20, v.columns - INSET)
   const memPct = snap.mem.total ? (100 * snap.mem.used) / snap.mem.total : 0
@@ -48,7 +48,7 @@ export function renderSystem($: EngineInterface, e: RenderInput, v: SystemView) 
 
       {panel(
         ui,
-        'Geheugen',
+        'Memory',
         meter(ui, memPct, inner),
         <Text>
           <Text dimColor>
@@ -62,7 +62,7 @@ export function renderSystem($: EngineInterface, e: RenderInput, v: SystemView) 
 
       {panel(
         ui,
-        'Schijven',
+        'Disks',
         <Box flexDirection="column">
           {snap.disks.map(d => {
             const used = d.total ? (100 * d.used) / d.total : 0
@@ -79,10 +79,10 @@ export function renderSystem($: EngineInterface, e: RenderInput, v: SystemView) 
 
       {panel(
         ui,
-        'Processen',
+        'Processes',
         <Box flexDirection="column">
           <Text dimColor bold>
-            {'    PID'} {fit('NAAM', nameWidth)} {'  CPU%'} {'  MEM%'}
+            {'    PID'} {fit('NAME', nameWidth)} {'  CPU%'} {'  MEM%'}
           </Text>
           {snap.top.map(p => {
             const isAsking = isConfirmed(v.pending, `kill:${p.pid}`)
