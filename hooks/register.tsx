@@ -5,7 +5,7 @@ import type { Confirm, GitView, Preview, Proc, Snapshot, Tab } from '../types'
 import type { FileListPost } from './filelist'
 import { loadPreview, mention, renderFiles } from './files'
 import { NETWORK_MS, renderGit } from './git'
-import { type Os, isConfirmed, isStaged, join } from './lib'
+import { type Os, isConfirmed, isStaged, join, LINK } from './lib'
 import { REFRESH_MS, detectOs, killArgv, probe } from './probes'
 import { readGit, runGit } from './repo'
 import { renderSystem } from './system'
@@ -221,7 +221,7 @@ export const register: Register = on => {
                       {t.label}
                     </Text>
                   ) : (
-                    <Text color="suggestion">{t.label}</Text>
+                    <Text color={LINK}>{t.label}</Text>
                   )}
                 </Button>
               </Box>

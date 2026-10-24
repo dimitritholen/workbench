@@ -1,4 +1,5 @@
 import type { ClientKeyEvent, ClientPointerEvent, ClientSurface } from 'claude-code'
+import { LINK } from './lib'
 
 // What the hooks module hands the list; it answers with posts: open, up, mention.
 export type Entry = { name: string; isDir: boolean; size: string }
@@ -134,7 +135,7 @@ export default function FileList(props: FileListProps, surface: ClientSurface<Li
         return (
           <Text>
             <Text color="claude">{isSelected ? '→ ' : '  '}</Text>
-            <Text bold={isSelected || entry.isDir} color={entry.isDir ? 'suggestion' : 'text'} inverse={isSelected}>
+            <Text bold={isSelected || entry.isDir} color={entry.isDir ? LINK : 'text'} inverse={isSelected}>
               {label}
             </Text>
             {!entry.isDir && <Text dimColor> {entry.size}</Text>}

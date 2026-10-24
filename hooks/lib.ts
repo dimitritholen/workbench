@@ -3,6 +3,9 @@ import type { Change, Commit, Disk, GitView, Proc, Snapshot } from '../types'
 export type Os = 'linux' | 'macos' | 'windows'
 export type CpuTimes = { idle: number; total: number }
 
+// The color of everything you can open or press: a muted teal.
+export const LINK = '#5fafaf'
+
 const numbers = (text: string) => (text.match(/[\d.]+/g) ?? []).map(Number)
 
 // --- Linux: /proc ---

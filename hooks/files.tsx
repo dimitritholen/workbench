@@ -2,7 +2,7 @@ import type { EngineInterface, RenderInput } from 'claude-code'
 
 import type { Preview } from '../types'
 import type { FileListProps } from './filelist'
-import { bytes, join } from './lib'
+import { bytes, join, LINK } from './lib'
 import { block, fit, hints, INSET } from './ui'
 
 const HIDDEN = new Set(['.git', 'node_modules'])
@@ -57,7 +57,7 @@ export async function renderFiles($: EngineInterface, e: RenderInput, v: FilesVi
           <Box flexDirection="column">
             <Box gap={2}>
               <Button key="back" plain hotkey="b" onPress={v.onBack}>
-                <Text color="suggestion">← back</Text>
+                <Text color={LINK}>← back</Text>
               </Button>
               <Button key="mention-open" plain hotkey="a" onPress={() => mention($, shown.path)}>
                 <Text color="claude">@ to prompt</Text>
@@ -119,7 +119,7 @@ export async function renderFiles($: EngineInterface, e: RenderInput, v: FilesVi
         return (
           <Box key={`row:${path}`}>
             <Button key={`f:${path}`} plain onPress={() => (isDir ? v.onDir(path) : v.onFile(path))}>
-              <Text color={isDir ? 'suggestion' : 'text'} bold={isDir}>
+              <Text color={isDir ? LINK : 'text'} bold={isDir}>
                 {fit(isDir ? `${entry.name}/` : entry.name, nameWidth)}
               </Text>
               <Text dimColor>{isDir ? ''.padStart(8) : bytes(entry.size).padStart(8)}</Text>

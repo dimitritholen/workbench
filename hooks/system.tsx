@@ -1,7 +1,7 @@
 import type { EngineInterface, RenderInput } from 'claude-code'
 
 import type { Confirm, Proc, Snapshot } from '../types'
-import { brailleChart, bytes, isConfirmed, toBase64 } from './lib'
+import { brailleChart, bytes, isConfirmed, toBase64, LINK } from './lib'
 import { block, fit, hints, INSET, level, meter, sparkline } from './ui'
 
 export type SystemView = {
@@ -74,7 +74,7 @@ export function renderSystem($: EngineInterface, e: RenderInput, v: SystemView) 
             const used = d.total ? (100 * d.used) / d.total : 0
             return (
               <Text>
-                <Text color="suggestion">{fit(d.mount, mountWidth)}</Text> {meter(ui, used, diskBar)}{' '}
+                <Text color={LINK}>{fit(d.mount, mountWidth)}</Text> {meter(ui, used, diskBar)}{' '}
                 <Text color={level(used)}>{pct(used)}</Text>
                 <Text dimColor> {`${bytes(d.used)}/${bytes(d.total)}`.padStart(15)}</Text>
               </Text>

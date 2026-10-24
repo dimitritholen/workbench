@@ -1,7 +1,7 @@
 import type { Color, EngineInterface, RenderInput } from 'claude-code'
 
 import type { Change, Confirm, GitView } from '../types'
-import { isConfirmed, isStaged, isUnstaged } from './lib'
+import { isConfirmed, isStaged, isUnstaged, LINK } from './lib'
 import { block, fit, hints, INSET } from './ui'
 
 export type GitActions = {
@@ -22,7 +22,7 @@ const badge = (letter: string): [string, Color] =>
   letter === '?' ? ['U', 'claude']
   : letter === 'A' ? ['A', 'success']
   : letter === 'D' ? ['D', 'error']
-  : letter === 'R' || letter === 'C' ? [letter, 'suggestion']
+  : letter === 'R' || letter === 'C' ? [letter, LINK]
   : [letter, 'warning']
 
 export function renderGit($: EngineInterface, e: RenderInput, v: GitPaneView, a: GitActions) {
@@ -79,18 +79,18 @@ export function renderGit($: EngineInterface, e: RenderInput, v: GitPaneView, a:
         <Box flexDirection="column">
           {g.error && <Text color="error">{g.error}</Text>}
           <Box gap={2} flexWrap="wrap">
-        {chip('pull', '↓ pull', 'suggestion', () => a.run(['pull', '--ff-only'], 'Up to date.', NETWORK_MS))}
+        {chip('pull', '↓ pull', LINK, () => a.run(['pull', '--ff-only'], 'Up to date.', NETWORK_MS))}
         <Button key="push" plain onPress={a.push}>
           {isAsking ? (
             <Text inverse bold color="warning">
               {` ↑ push ${g.upstream ? `${g.ahead} commit(s) ` : ''}to ${target}? `}
             </Text>
           ) : (
-            <Text color="suggestion">↑ push</Text>
+            <Text color={LINK}>↑ push</Text>
           )}
         </Button>
-        {chip('stash', '⊟ stash', 'suggestion', () => a.run(['stash'], 'Stashed.'))}
-        {g.stashes > 0 && chip('pop', `⊞ pop (${g.stashes})`, 'suggestion', () => a.run(['stash', 'pop'], 'Stash applied.'))}
+        {chip('stash', '⊟ stash', LINK, () => a.run(['stash'], 'Stashed.'))}
+        {g.stashes > 0 && chip('pop', `⊞ pop (${g.stashes})`, LINK, () => a.run(['stash', 'pop'], 'Stash applied.'))}
         {chip('refresh', '↻', 'inactive', a.refresh)}
           </Box>
         </Box>,
@@ -151,7 +151,7 @@ export function renderGit($: EngineInterface, e: RenderInput, v: GitPaneView, a:
             {g.log.map(c => (
               <Box justifyContent="space-between">
                 <Text wrap="truncate-end">
-                  <Text color="claude">●</Text> <Text color="suggestion">{c.hash}</Text> {c.subject}
+                  <Text color="claude">●</Text> <Text color={LINK}>{c.hash}</Text> {c.subject}
                 </Text>
                 <Text dimColor> {c.when}</Text>
               </Box>
