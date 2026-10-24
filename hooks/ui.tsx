@@ -8,6 +8,8 @@ export type Ui = { Box: ElementConstructor<BoxProps>; Text: ElementConstructor<T
 // A round border and one cell of padding take four columns of the pane.
 export const INSET = 4
 
+const BORDER = '#555555'
+
 export const level = (percent: number): Color => (percent >= 85 ? 'error' : percent >= 60 ? 'warning' : 'success')
 
 export type BlockOptions = { title: string; footer?: string; right?: RenderChildren; isFocused?: boolean }
@@ -17,39 +19,25 @@ export type BlockOptions = { title: string; footer?: string; right?: RenderChild
 // the siblings before it, never over its own parent's border.
 export function block(ui: Ui, o: BlockOptions, body: RenderChildren) {
   const { Box, Text } = ui
-  const accent: Color = o.isFocused ? 'claude' : 'subtle'
-  const label = (content: RenderChildren) => (
-    <Text>
-      <Text color={accent} dimColor>
-        ┤
-      </Text>
-      {content}
-      <Text color={accent} dimColor>
-        ├
-      </Text>
-    </Text>
-  )
-  // borders dimmed, so they stay apart from the meters inside them
+  // every border the same dark gray; the focused block shows in its title color
   return (
     <Box flexDirection="column">
-      <Box flexDirection="column" borderStyle="round" borderColor={accent} borderDimColor paddingX={1}>
+      <Box flexDirection="column" borderStyle="round" borderColor={BORDER} paddingX={1}>
         {body}
       </Box>
       <Box position="absolute" top={0} left={1}>
-        {label(
-          <Text bold color={o.isFocused ? 'claude' : 'text'}>
-            {o.title}
-          </Text>,
-        )}
+        <Text bold color={o.isFocused ? 'claude' : 'text'}>
+          {` ${o.title} `}
+        </Text>
       </Box>
       {o.right !== undefined && (
         <Box position="absolute" top={0} right={1}>
-          {label(o.right)}
+          <Text> {o.right} </Text>
         </Box>
       )}
       {o.footer !== undefined && (
         <Box position="absolute" bottom={0} right={1}>
-          {label(<Text dimColor>{o.footer}</Text>)}
+          <Text dimColor>{` ${o.footer} `}</Text>
         </Box>
       )}
     </Box>
@@ -74,16 +62,14 @@ export function hints(ui: Ui, pairs: [string, string][]) {
   )
 }
 
-// A braille bar: the used part in its level's color, the rest a faint track.
+// A braille bar in its level's color; blank after it, so the columns behind still line up.
 export function meter(ui: Ui, percent: number, width: number) {
   const { Text } = ui
   const { used, rest } = brailleBar(percent, width)
   return (
     <Text>
       <Text color={level(percent)}>{used}</Text>
-      <Text color="subtle" dimColor>
-        {rest}
-      </Text>
+      {' '.repeat(rest.length)}
     </Text>
   )
 }
