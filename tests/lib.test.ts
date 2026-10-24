@@ -2,6 +2,9 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import {
   bar,
+  brailleChart,
+  heat,
+  toBase64,
   bytes,
   cpuPercent,
   isConfirmed,
@@ -115,4 +118,21 @@ test('drawing helpers and the confirm window', () => {
   expect(isConfirmed({ action: 'push', at: 1000 }, 'push', 3000)).toBe(true)
   expect(isConfirmed({ action: 'push', at: 1000 }, 'push', 7000)).toBe(false)
   expect(isConfirmed({ action: 'kill:1', at: 1000 }, 'push', 2000)).toBe(false)
+})
+
+test('base64 matches the platform encoder', () => {
+  for (const text of ['', 'a', 'ab', 'abc', 'workbench!']) {
+    expect(toBase64(new TextEncoder().encode(text))).toBe(btoa(text))
+  }
+})
+
+test('the braille chart fills from the bottom, newest on the right', () => {
+  // 2 columns x 1 row: four samples, the last two full height
+  const cells = brailleChart([0, 0, 100, 100], 2, 1)
+  expect(cells[0]).toBe(0x2800 + 0xc0) // both samples zero: the faint baseline
+  expect(brailleChart([], 1, 2)[0]).toBe(0x20) // above the bottom row, empty is blank
+  expect(cells[3]).toBe(0x2800 + 0xff) // all eight dots
+  // one sample at half height in the right column of a 1x1 chart: two dots
+  expect(brailleChart([50], 1, 1)[0]).toBe(0x2800 + 0x80 + 0x20)
+  expect(heat(0) & 0xff00).toBeGreaterThan(heat(1) & 0xff00) // greener at the bottom
 })

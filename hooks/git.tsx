@@ -2,7 +2,7 @@ import type { Color, EngineInterface, RenderInput } from 'claude-code'
 
 import type { Change, Confirm, GitView } from '../types'
 import { isConfirmed, isStaged, isUnstaged } from './lib'
-import { INSET, fit, panel } from './ui'
+import { block, fit, hints, INSET } from './ui'
 
 export type GitActions = {
   run: (args: string[], done: string, timeoutMs?: number) => unknown
@@ -29,9 +29,9 @@ export function renderGit($: EngineInterface, e: RenderInput, v: GitPaneView, a:
   const ui = $.ui.resolve(e)
   const { Box, Text, Button } = ui
   const { g, pending, draft } = v
-  if (!g) return <Text dimColor>Loading…</Text>
+  if (!g) return block(ui, { title: 'Git' }, <Text dimColor>Loading…</Text>)
   if (!g.isRepo) {
-    return panel(ui, 'Git', <Text dimColor>{g.error ?? 'This folder is not a git repository.'}</Text>)
+    return block(ui, { title: 'Git' }, <Text dimColor>{g.error ?? 'This folder is not a git repository.'}</Text>)
   }
 
   const inner = Math.max(20, v.columns - INSET)
@@ -68,20 +68,17 @@ export function renderGit($: EngineInterface, e: RenderInput, v: GitPaneView, a:
 
   return (
     <Box flexDirection="column">
-      <Box justifyContent="space-between">
-        <Text>
-          <Text color="claude" bold>
-            {g.branch || '(no branch)'}
-          </Text>
-          <Text dimColor>{g.upstream ? ` → ${g.upstream}` : ' · no upstream'}</Text>
-          {g.ahead > 0 && <Text color="success"> ↑{g.ahead}</Text>}
-          {g.behind > 0 && <Text color="warning"> ↓{g.behind}</Text>}
-        </Text>
-        {status}
-      </Box>
-      {g.error && <Text color="error">{g.error}</Text>}
-
-      <Box gap={2} flexWrap="wrap">
+      {block(
+        ui,
+        {
+          title: g.branch || "(no branch)",
+          right: status,
+          footer: `${g.upstream ?? 'no upstream'}${g.ahead ? ` ↑${g.ahead}` : ''}${g.behind ? ` ↓${g.behind}` : ''}`,
+          isFocused: true,
+        },
+        <Box flexDirection="column">
+          {g.error && <Text color="error">{g.error}</Text>}
+          <Box gap={2} flexWrap="wrap">
         {chip('pull', '↓ pull', 'suggestion', () => a.run(['pull', '--ff-only'], 'Up to date.', NETWORK_MS))}
         <Button key="push" plain onPress={a.push}>
           {isAsking ? (
@@ -95,11 +92,13 @@ export function renderGit($: EngineInterface, e: RenderInput, v: GitPaneView, a:
         {chip('stash', '⊟ stash', 'suggestion', () => a.run(['stash'], 'Stashed.'))}
         {g.stashes > 0 && chip('pop', `⊞ pop (${g.stashes})`, 'suggestion', () => a.run(['stash', 'pop'], 'Stash applied.'))}
         {chip('refresh', '↻', 'inactive', a.refresh)}
-      </Box>
+          </Box>
+        </Box>,
+      )}
 
-      {panel(
+      {block(
         ui,
-        `Staged ${staged.length}`,
+        { title: 'Staged', footer: `${staged.length}` },
         staged.length === 0 ? (
           <Text dimColor>Nothing staged. Click a change to stage it.</Text>
         ) : (
@@ -108,9 +107,9 @@ export function renderGit($: EngineInterface, e: RenderInput, v: GitPaneView, a:
           </Box>
         ),
       )}
-      {panel(
+      {block(
         ui,
-        `Changes ${unstaged.length}`,
+        { title: 'Changes', footer: `${unstaged.length}` },
         unstaged.length === 0 ? (
           <Text dimColor>No changes in the working tree.</Text>
         ) : (
@@ -120,9 +119,9 @@ export function renderGit($: EngineInterface, e: RenderInput, v: GitPaneView, a:
         ),
       )}
 
-      {panel(
+      {block(
         ui,
-        'Commit',
+        { title: 'Commit' },
         <Box flexDirection="column">
           {'Input' in ui ? (
             <ui.Input
@@ -142,9 +141,9 @@ export function renderGit($: EngineInterface, e: RenderInput, v: GitPaneView, a:
         </Box>,
       )}
 
-      {panel(
+      {block(
         ui,
-        'Commits',
+        { title: 'Log', footer: `${g.log.length}` },
         g.log.length === 0 ? (
           <Text dimColor>No commits yet.</Text>
         ) : (
@@ -152,7 +151,7 @@ export function renderGit($: EngineInterface, e: RenderInput, v: GitPaneView, a:
             {g.log.map(c => (
               <Box justifyContent="space-between">
                 <Text wrap="truncate-end">
-                  <Text color="claude">●</Text> <Text color="warning">{c.hash}</Text> {c.subject}
+                  <Text color="claude">●</Text> <Text color="suggestion">{c.hash}</Text> {c.subject}
                 </Text>
                 <Text dimColor> {c.when}</Text>
               </Box>
@@ -160,6 +159,11 @@ export function renderGit($: EngineInterface, e: RenderInput, v: GitPaneView, a:
           </Box>
         ),
       )}
+      {hints(ui, [
+        ['click', 'stage/unstage'],
+        ['⏎', 'commit'],
+        ['push', 'twice'],
+      ])}
     </Box>
   )
 }

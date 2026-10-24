@@ -175,3 +175,69 @@ export const parent = (dir: string) => dir.split('/').slice(0, -1).join('/')
 export const CONFIRM_MS = 5000
 export const isConfirmed = (c: { action: string; at: number } | null, action: string, now = Date.now()) =>
   c?.action === action && now - c.at < CONFIRM_MS
+
+// --- Raster cells ---
+
+const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+
+export function toBase64(bytes: Uint8Array): string {
+  let out = ''
+  for (let i = 0; i < bytes.length; i += 3) {
+    const [a = 0, b = 0, c = 0] = [bytes[i], bytes[i + 1], bytes[i + 2]]
+    const n = (a << 16) | (b << 8) | c
+    out += B64[(n >> 18) & 63]! + B64[(n >> 12) & 63]!
+    out += i + 1 < bytes.length ? B64[(n >> 6) & 63]! : '='
+    out += i + 2 < bytes.length ? B64[n & 63]! : '='
+  }
+  return out
+}
+
+export const DEFAULT_COLOR = 0x01000000
+const BASELINE = 0x4a4a4a
+
+// Green at the bottom of a graph, through yellow, to red at the top.
+export function heat(t: number): number {
+  const x = Math.max(0, Math.min(1, t))
+  const mix = (from: number[], to: number[], f: number) => from.map((c, i) => Math.round(c + ((to[i] ?? c) - c) * f))
+  const [r = 0, g = 0, b = 0] = x < 0.5 ? mix([80, 200, 120], [230, 200, 80], x * 2) : mix([230, 200, 80], [235, 90, 90], (x - 0.5) * 2)
+  return (r << 16) | (g << 8) | b
+}
+
+// Braille dot bits per cell row from the bottom: [left column, right column].
+const DOTS: [number, number][] = [
+  [0x40, 0x80],
+  [0x04, 0x20],
+  [0x02, 0x10],
+  [0x01, 0x08],
+]
+
+// An area chart of percentages in braille, two samples per cell, newest right.
+// Answers the Raster's cells: [codePoint, foreground, background] per cell.
+export function brailleChart(values: number[], columns: number, rows: number): Uint32Array {
+  const cells = new Uint32Array(columns * rows * 3)
+  const samples = values.slice(-columns * 2)
+  const pad = columns * 2 - samples.length
+  const height = (i: number) => {
+    const v = samples[i - pad]
+    return v === undefined ? 0 : Math.round((clamp(v) / 100) * rows * 4)
+  }
+  for (let cy = 0; cy < rows; cy++) {
+    const fromBottom = rows - 1 - cy
+    for (let cx = 0; cx < columns; cx++) {
+      let bits = 0
+      for (const [side, i] of [[0, cx * 2], [1, cx * 2 + 1]] as const) {
+        const h = height(i)
+        DOTS.forEach((dot, k) => {
+          if (fromBottom * 4 + k < h) bits |= dot[side]
+        })
+      }
+      const at = (cy * columns + cx) * 3
+      // an empty bottom cell draws a faint baseline, so an idle graph still reads as one
+      const isBaseline = !bits && fromBottom === 0
+      cells[at] = bits ? 0x2800 + bits : isBaseline ? 0x2800 + 0xc0 : 0x20
+      cells[at + 1] = isBaseline ? BASELINE : heat((fromBottom + 0.5) / rows)
+      cells[at + 2] = DEFAULT_COLOR
+    }
+  }
+  return cells
+}

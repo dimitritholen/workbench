@@ -10,18 +10,62 @@ export const INSET = 4
 
 export const level = (percent: number): Color => (percent >= 85 ? 'error' : percent >= 60 ? 'warning' : 'success')
 
-export function panel(ui: Ui, title: string, body: RenderChildren, right?: RenderChildren) {
+export type BlockOptions = { title: string; footer?: string; right?: RenderChildren; isFocused?: boolean }
+
+// A ratatui-style block: the title sits in the top border, a footer in the bottom one.
+// The labels are siblings after the bordered box: an absolute box paints over
+// the siblings before it, never over its own parent's border.
+export function block(ui: Ui, o: BlockOptions, body: RenderChildren) {
   const { Box, Text } = ui
+  const accent: Color = o.isFocused ? 'claude' : 'subtle'
+  const label = (content: RenderChildren) => (
+    <Text>
+      <Text color={accent}>┤</Text>
+      {content}
+      <Text color={accent}>├</Text>
+    </Text>
+  )
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor="subtle" paddingX={1}>
-      <Box justifyContent="space-between">
-        <Text bold color="claude">
-          {title}
-        </Text>
-        {right ?? null}
+    <Box flexDirection="column">
+      <Box flexDirection="column" borderStyle="round" borderColor={accent} paddingX={1}>
+        {body}
       </Box>
-      {body}
+      <Box position="absolute" top={0} left={1}>
+        {label(
+          <Text bold color={o.isFocused ? 'claude' : 'text'}>
+            {o.title}
+          </Text>,
+        )}
+      </Box>
+      {o.right !== undefined && (
+        <Box position="absolute" top={0} right={1}>
+          {label(o.right)}
+        </Box>
+      )}
+      {o.footer !== undefined && (
+        <Box position="absolute" bottom={0} right={1}>
+          {label(<Text dimColor>{o.footer}</Text>)}
+        </Box>
+      )}
     </Box>
+  )
+}
+
+// `[key→action]` hints, the keys in the accent color, as a status line under the pane.
+export function hints(ui: Ui, pairs: [string, string][]) {
+  const { Text } = ui
+  return (
+    <Text wrap="truncate-end">
+      {pairs.map(([key, action]) => (
+        <Text>
+          <Text color="subtle">[</Text>
+          <Text color="warning">{key}</Text>
+          <Text color="subtle">→</Text>
+          <Text dimColor>{action}</Text>
+          <Text color="subtle">] </Text>
+        </Text>
+      ))}
+    </Text>
   )
 }
 

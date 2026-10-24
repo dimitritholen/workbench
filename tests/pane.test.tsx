@@ -56,20 +56,41 @@ function host(on: On) {
   return { ran, filled, clock }
 }
 
-test('files: folders first, node_modules hidden, @ fills the prompt', async ($, on) => {
+test('files: the list Client moves with keys, @ fills the prompt, enter previews', async ($, on) => {
   const { filled } = host(on)
+  on('fs.stat', () => ({ value: { kind: 'file', size: 2048, mtimeMs: 1, isLink: false } }))
   await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
 
-  const rows = await ui.findAll({ type: 'Button' })
-  const keys = rows.map(r => r.key)
-  expect(keys).toContain('f:src')
-  expect(keys).toContain('f:README.md')
-  expect(keys).not.toContain('f:node_modules')
-  expect(keys.indexOf('f:src')).toBeLessThan(keys.indexOf('f:README.md'))
+  const rows = (await ui.findAll({ type: 'Text', in: 'files' })).map(t => t.text)
+  const src = rows.findIndex(t => /src\//.test(t ?? ''))
+  const readme = rows.findIndex(t => /README\.md/.test(t ?? ''))
+  expect(src).toBeGreaterThanOrEqual(0)
+  expect(readme).toBeGreaterThan(src)
+  expect(rows.some(t => /node_modules/.test(t ?? ''))).toBe(false)
 
-  await ui.press({ key: 'm:README.md' })
+  await ui.key({ key: 'down', in: 'files' })
+  await ui.key({ key: '@', in: 'files' })
   expect(filled).toEqual(['@README.md '])
+
+  // a filter typed fast arrives as one event
+  await ui.key({ key: '/READ', in: 'files' })
+  const filtered = (await ui.findAll({ type: 'Text', in: 'files' })).map(t => t.text ?? '')
+  expect(filtered.some(t => /1 match\b/.test(t))).toBe(true)
+  await ui.key({ key: 'return', in: 'files' })
+
+  await ui.key({ key: 'return', in: 'files' })
+  expect(await ui.find({ key: 'back' })).toBeDefined()
+  await ui.unmount()
+})
+
+test('files: surfaces without Client get a list of buttons', async ($, on) => {
+  host(on)
+  await $.session.start({ cwd: '/repo', surface: 'vscode', isInteractive: true })
+  const ui = await $.ui.mount({ ...PANE, surface: 'vscode' })
+  const keys = (await ui.findAll({ type: 'Button' })).map(b => b.key)
+  expect(keys).toContain('f:src')
+  expect(keys).not.toContain('f:node_modules')
   await ui.unmount()
 })
 
@@ -80,6 +101,7 @@ test('system: refreshes on the clock; kill asks first, then runs kill', async ($
 
   await ui.press({ key: 'tab:system' })
   expect(await ui.find({ type: 'Text', text: /Disks/ })).toBeDefined()
+  expect(await ui.find({ type: 'Raster', key: 'cpu' })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /\/mnt\/c/ })).toBeDefined()
   const probes = ran.filter(c => c.startsWith('ps')).length
   await clock.advance(2000)

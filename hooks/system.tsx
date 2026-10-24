@@ -1,8 +1,8 @@
 import type { EngineInterface, RenderInput } from 'claude-code'
 
 import type { Confirm, Proc, Snapshot } from '../types'
-import { bytes, isConfirmed } from './lib'
-import { INSET, fit, level, meter, panel, sparkline } from './ui'
+import { brailleChart, bytes, isConfirmed, toBase64 } from './lib'
+import { block, fit, hints, INSET, level, meter, sparkline } from './ui'
 
 export type SystemView = {
   snap: Snapshot | null
@@ -11,64 +11,70 @@ export type SystemView = {
   onKill: (p: Proc) => unknown
 }
 
+const GRAPH_ROWS = 4
 const pct = (n: number) => `${n.toFixed(0).padStart(3)}%`
 
 export function renderSystem($: EngineInterface, e: RenderInput, v: SystemView) {
   const ui = $.ui.resolve(e)
   const { Box, Text, Button } = ui
   const { snap } = v
-  if (!snap) return <Text dimColor>Measuring…</Text>
+  if (!snap) return block(ui, { title: 'System' }, <Text dimColor>Measuring…</Text>)
 
   const inner = Math.max(20, v.columns - INSET)
   const memPct = snap.mem.total ? (100 * snap.mem.used) / snap.mem.total : 0
-  const history = (snap.history ?? []).slice(-inner)
+  const history = snap.history ?? []
   const mountWidth = Math.min(14, Math.max(...snap.disks.map(d => d.mount.length), 4))
   const diskBar = Math.max(6, inner - mountWidth - 22)
   // PID 7, CPU% 6, MEM% 6, kill 2, spaces 4
   const nameWidth = Math.max(8, inner - 25)
 
+  const graph =
+    'Raster' in ui ? (
+      <ui.Raster key="cpu" columns={inner} rows={GRAPH_ROWS} cells={toBase64(new Uint8Array(brailleChart(history, inner, GRAPH_ROWS).buffer))} />
+    ) : (
+      <Text color="claude">{sparkline(history.slice(-inner)).padStart(inner)}</Text>
+    )
+
   return (
     <Box flexDirection="column">
-      {panel(
+      {block(
         ui,
-        'CPU',
-        <Box flexDirection="column">
-          {meter(ui, snap.cpu, inner)}
-          <Text color="claude">{sparkline(history).padStart(inner)}</Text>
-          {snap.load && (
-            <Text dimColor>
-              load {snap.load.map(n => n.toFixed(2)).join(' · ')}
+        {
+          title: 'CPU',
+          right: (
+            <Text bold color={level(snap.cpu)}>
+              {pct(snap.cpu)}
             </Text>
-          )}
-        </Box>,
-        <Text bold color={level(snap.cpu)}>
-          {pct(snap.cpu)}
-        </Text>,
+          ),
+          footer: snap.load ? `load ${snap.load.map(n => n.toFixed(2)).join(' ')}` : undefined,
+          isFocused: true,
+        },
+        graph,
       )}
 
-      {panel(
+      {block(
         ui,
-        'Memory',
+        {
+          title: 'Memory',
+          right: (
+            <Text bold color={level(memPct)}>
+              {pct(memPct)}
+            </Text>
+          ),
+          footer: `${bytes(snap.mem.used)} / ${bytes(snap.mem.total)}`,
+        },
         meter(ui, memPct, inner),
-        <Text>
-          <Text dimColor>
-            {bytes(snap.mem.used)} / {bytes(snap.mem.total)}{' '}
-          </Text>
-          <Text bold color={level(memPct)}>
-            {pct(memPct)}
-          </Text>
-        </Text>,
       )}
 
-      {panel(
+      {block(
         ui,
-        'Disks',
+        { title: 'Disks', footer: `${snap.disks.length}` },
         <Box flexDirection="column">
           {snap.disks.map(d => {
             const used = d.total ? (100 * d.used) / d.total : 0
             return (
               <Text>
-                {fit(d.mount, mountWidth)} {meter(ui, used, diskBar)}{' '}
+                <Text color="suggestion">{fit(d.mount, mountWidth)}</Text> {meter(ui, used, diskBar)}{' '}
                 <Text color={level(used)}>{pct(used)}</Text>
                 <Text dimColor> {`${bytes(d.used)}/${bytes(d.total)}`.padStart(15)}</Text>
               </Text>
@@ -77,11 +83,11 @@ export function renderSystem($: EngineInterface, e: RenderInput, v: SystemView) 
         </Box>,
       )}
 
-      {panel(
+      {block(
         ui,
-        'Processes',
+        { title: 'Processes', footer: 'top 10 · % of one core' },
         <Box flexDirection="column">
-          <Text dimColor bold>
+          <Text bold>
             {'    PID'} {fit('NAME', nameWidth)} {'  CPU%'} {'  MEM%'}
           </Text>
           {snap.top.map(p => {
@@ -108,8 +114,11 @@ export function renderSystem($: EngineInterface, e: RenderInput, v: SystemView) 
             )
           })}
         </Box>,
-        <Text dimColor>top 10 · CPU per core</Text>,
       )}
+      {hints(ui, [
+        ['×', 'kill (twice)'],
+        ['1-3', 'tab'],
+      ])}
     </Box>
   )
 }

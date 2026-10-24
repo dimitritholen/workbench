@@ -2,12 +2,14 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Confirm, GitView, Preview, Proc, Snapshot, Tab } from '../types'
-import { loadPreview, renderFiles } from './files'
+import type { FileListPost } from './filelist'
+import { loadPreview, mention, renderFiles } from './files'
 import { NETWORK_MS, renderGit } from './git'
-import { type Os, isConfirmed, isStaged } from './lib'
+import { type Os, isConfirmed, isStaged, join } from './lib'
 import { REFRESH_MS, detectOs, killArgv, probe } from './probes'
 import { readGit, runGit } from './repo'
 import { renderSystem } from './system'
+import { block } from './ui'
 
 const PANE = 'workbench'
 const TITLE = 'Workbench'
@@ -35,6 +37,7 @@ const message = atom({ plugin: 'workbench', key: 'message' } as const, '')
 
 // Set on every session.start, which a reload runs too.
 let os: Os = 'linux'
+let folder = ''
 
 async function refreshSystem($: EngineInterface) {
   const snap = await probe($, os).catch(async error => {
@@ -121,6 +124,15 @@ async function commit($: EngineInterface) {
   if (await gitRun($, ['commit', '-m', text], 'Committed.')) await update($, message, () => '')
 }
 
+// What the file list Client posts: open a folder or file, go up, or mention a path.
+async function fileListMessage($: EngineInterface, post: FileListPost) {
+  const here = await read($, dir)
+  if (post.type === 'up') return update($, dir, d => d.split('/').slice(0, -1).join('/'))
+  const path = join(here, post.name)
+  if (post.type === 'mention') return mention($, path)
+  return post.isDir ? update($, dir, () => path) : openFile($, path)
+}
+
 async function submit($: EngineInterface, text: string) {
   await update($, message, () => text)
   await commit($)
@@ -129,6 +141,7 @@ async function submit($: EngineInterface, text: string) {
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     os = await detectOs($, e.cwd)
+    folder = e.cwd.split(/[\\/]/).filter(Boolean).pop() ?? e.cwd
     await $.command.register({ name: 'workbench', description: 'Open the Files / System / Git pane' })
     // A new session starts at the working directory again.
     await update($, dir, () => '')
@@ -147,10 +160,17 @@ export const register: Register = on => {
     return { text: 'Workbench opened.' }
   })
 
+  on('ui.message', { requestId: PANE }, async ($, e) => {
+    await fileListMessage($, e.data as FileListPost)
+    return {}
+  })
+
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    const { Box, Text, Button } = $.ui.resolve(e)
+    const ui = $.ui.resolve(e)
+    const { Box, Text, Button } = ui
     const current = await read($, tab)
     const columns = e.props.bodyColumns
+    const rows = e.props.scroll.bodyRows
 
     let body
     if (current === 'files') {
@@ -158,6 +178,7 @@ export const register: Register = on => {
         here: await read($, dir),
         shown: await read($, preview),
         columns,
+        rows,
         onDir: path => update($, dir, () => path),
         onFile: path => openFile($, path),
         onBack: () => update($, preview, () => null),
@@ -187,20 +208,26 @@ export const register: Register = on => {
 
     return (
       <Box flexDirection="column">
-        <Box gap={1}>
-          {TABS.map(t => (
-            <Button key={`tab:${t.id}`} plain hotkey={t.hotkey} onPress={() => select($, t.id)}>
-              {t.id === current ? (
-                <Text inverse bold color="claude">
-                  {` ${t.label} `}
-                </Text>
-              ) : (
-                <Text color="inactive">{` ${t.label} `}</Text>
-              )}
-            </Button>
-          ))}
-        </Box>
-        <Text color="subtle">{'─'.repeat(Math.max(0, columns))}</Text>
+        {block(
+          ui,
+          { title: 'workbench', right: <Text color="inactive">{folder}</Text> },
+          <Box>
+            {TABS.map((t, i) => (
+              <Box key={`tabs:${t.id}`}>
+                {i > 0 && <Text color="subtle"> │ </Text>}
+                <Button key={`tab:${t.id}`} plain hotkey={t.hotkey} onPress={() => select($, t.id)}>
+                  {t.id === current ? (
+                    <Text bold underline color="claude">
+                      {t.label}
+                    </Text>
+                  ) : (
+                    <Text color="suggestion">{t.label}</Text>
+                  )}
+                </Button>
+              </Box>
+            ))}
+          </Box>,
+        )}
         {body}
       </Box>
     )
