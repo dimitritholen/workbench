@@ -81,6 +81,11 @@ test('files: the list Client moves with keys, @ fills the prompt, enter previews
 
   await ui.key({ key: 'return', in: 'files' })
   expect(await ui.find({ key: 'back' })).toBeDefined()
+
+  // the list holds the keys after a click: tab keys still switch tabs
+  await ui.press({ key: 'back' })
+  await ui.key({ key: '2', in: 'files' })
+  expect(await ui.find({ type: 'Text', text: /Disks/ })).toBeDefined()
   await ui.unmount()
 })
 

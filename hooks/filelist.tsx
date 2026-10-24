@@ -4,7 +4,11 @@ import { LINK } from './lib'
 // What the hooks module hands the list; it answers with posts: open, up, mention.
 export type Entry = { name: string; isDir: boolean; size: string }
 export type FileListProps = { here: string; entries: Entry[]; rows: number; columns: number }
-export type FileListPost = { type: 'open'; name: string; isDir: boolean } | { type: 'mention'; name: string } | { type: 'up' }
+export type FileListPost =
+  | { type: 'open'; name: string; isDir: boolean }
+  | { type: 'mention'; name: string }
+  | { type: 'up' }
+  | { type: 'tab'; index: number }
 
 type ListState = { here: string; cursor: number; offset: number; filter: string; isFiltering: boolean }
 
@@ -88,6 +92,11 @@ export default function FileList(props: FileListProps, surface: ClientSurface<Li
         return st.filter ? set({ filter: '' }) : surface.post({ type: 'up' })
       case '@':
         return selected && surface.post({ type: 'mention', name: selected.name })
+      // the list holds the keys once clicked: the pane's tab keys go through it
+      case '1':
+      case '2':
+      case '3':
+        return surface.post({ type: 'tab', index: Number(e.key) - 1 })
       case '/':
         return set({ isFiltering: true })
     }

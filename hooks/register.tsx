@@ -127,6 +127,10 @@ async function commit($: EngineInterface) {
 // What the file list Client posts: open a folder or file, go up, or mention a path.
 async function fileListMessage($: EngineInterface, post: FileListPost) {
   const here = await read($, dir)
+  if (post.type === 'tab') {
+    const t = TABS[post.index]
+    return t && select($, t.id)
+  }
   if (post.type === 'up') return update($, dir, d => d.split('/').slice(0, -1).join('/'))
   const path = join(here, post.name)
   if (post.type === 'mention') return mention($, path)
