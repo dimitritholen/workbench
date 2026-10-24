@@ -153,11 +153,6 @@ export function clamp(n: number) {
   return Math.max(0, Math.min(100, n))
 }
 
-export function bar(percent: number, width: number) {
-  const full = Math.round((clamp(percent) / 100) * width)
-  return '█'.repeat(full) + '░'.repeat(width - full)
-}
-
 export function bytes(n: number) {
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
   let i = 0
@@ -175,6 +170,13 @@ export const parent = (dir: string) => dir.split('/').slice(0, -1).join('/')
 export const CONFIRM_MS = 5000
 export const isConfirmed = (c: { action: string; at: number } | null, action: string, now = Date.now()) =>
   c?.action === action && now - c.at < CONFIRM_MS
+
+// A bar in braille, half a cell per step: ⣿ full, ⡇ the left half, ⣀ the empty track.
+export function brailleBar(percent: number, width: number) {
+  const halves = Math.round((clamp(percent) / 100) * width * 2)
+  const used = '⣿'.repeat(Math.floor(halves / 2)) + (halves % 2 ? '⡇' : '')
+  return { used, rest: '⣀'.repeat(Math.max(0, width - used.length)) }
+}
 
 // --- Raster cells ---
 

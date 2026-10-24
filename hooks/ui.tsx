@@ -1,6 +1,6 @@
 import type { BoxProps, Color, ElementConstructor, RenderChildren, TextProps } from 'claude-code'
 
-import { clamp } from './lib'
+import { brailleBar, clamp } from './lib'
 
 // Box and Text are on every surface's table, so any table fits.
 export type Ui = { Box: ElementConstructor<BoxProps>; Text: ElementConstructor<TextProps> }
@@ -20,14 +20,19 @@ export function block(ui: Ui, o: BlockOptions, body: RenderChildren) {
   const accent: Color = o.isFocused ? 'claude' : 'subtle'
   const label = (content: RenderChildren) => (
     <Text>
-      <Text color={accent}>┤</Text>
+      <Text color={accent} dimColor>
+        ┤
+      </Text>
       {content}
-      <Text color={accent}>├</Text>
+      <Text color={accent} dimColor>
+        ├
+      </Text>
     </Text>
   )
+  // borders dimmed, so they stay apart from the meters inside them
   return (
     <Box flexDirection="column">
-      <Box flexDirection="column" borderStyle="round" borderColor={accent} paddingX={1}>
+      <Box flexDirection="column" borderStyle="round" borderColor={accent} borderDimColor paddingX={1}>
         {body}
       </Box>
       <Box position="absolute" top={0} left={1}>
@@ -69,14 +74,16 @@ export function hints(ui: Ui, pairs: [string, string][]) {
   )
 }
 
-// A line of heavy dashes: the used part in its level's color, the rest faint.
+// A braille bar: the used part in its level's color, the rest a faint track.
 export function meter(ui: Ui, percent: number, width: number) {
   const { Text } = ui
-  const full = Math.round((clamp(percent) / 100) * width)
+  const { used, rest } = brailleBar(percent, width)
   return (
     <Text>
-      <Text color={level(percent)}>{'━'.repeat(full)}</Text>
-      <Text color="subtle">{'━'.repeat(Math.max(0, width - full))}</Text>
+      <Text color={level(percent)}>{used}</Text>
+      <Text color="subtle" dimColor>
+        {rest}
+      </Text>
     </Text>
   )
 }

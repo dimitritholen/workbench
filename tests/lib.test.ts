@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import {
-  bar,
+  brailleBar,
   brailleChart,
   heat,
   toBase64,
@@ -111,8 +111,6 @@ describe('git', () => {
 })
 
 test('drawing helpers and the confirm window', () => {
-  expect(bar(50, 10)).toBe('█████░░░░░')
-  expect(bar(150, 4)).toBe('████')
   expect(bytes(1536)).toBe('1.5 KB')
   expect(bytes(512)).toBe('512 B')
   expect(isConfirmed({ action: 'push', at: 1000 }, 'push', 3000)).toBe(true)
@@ -135,4 +133,10 @@ test('the braille chart fills from the bottom, newest on the right', () => {
   // one sample at half height in the right column of a 1x1 chart: two dots
   expect(brailleChart([50], 1, 1)[0]).toBe(0x2800 + 0x80 + 0x20)
   expect(heat(0) & 0xff00).toBeGreaterThan(heat(1) & 0xff00) // greener at the bottom
+})
+
+test('the braille bar fills by half cells', () => {
+  expect(brailleBar(50, 4)).toEqual({ used: '⣿⣿', rest: '⣀⣀' })
+  expect(brailleBar(25, 2)).toEqual({ used: '⡇', rest: '⣀' })
+  expect(brailleBar(150, 3)).toEqual({ used: '⣿⣿⣿', rest: '' })
 })
